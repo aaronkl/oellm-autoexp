@@ -4,17 +4,15 @@ defaults:
   - /backend: megatron_torchrun
   - /container: leonardo
   - /slurm: leonardo
-  - /monitoring: megatron_basic
-  - /project: default
-  - /sweep: none 
-  - /experiments/aaron/models: moe_200M_A50M
-  - /experiments/aaron/data:   moe_ablation_data
+  - /sweep: none
+  -  override /backend/megatron: [data_nemotron_cc,moe_200M_A50M]
   - _self_
 
-project:
-  name: moe-exploration
-  resume: true
-  
+job:
+  base_output_dir: "${.name}"
+  name: "moe_hp_grid_lr${backend.megatron.lr}_gbsz${backend.megatron.global_batch_size}"
+  log_path_current: "${.name}"
+
 slurm:
   sbatch:
     nodes: 4
@@ -31,7 +29,7 @@ sweep:
   base_values:
     project.name: "moe_exploration_\\${backend.megatron.lr}_\\${backend.megatron.global_batch_size}"
   grids:
-    - backend.megatron.lr: [0.01, 0.007, 0.005, 0.003]
+      backend.megatron.lr: [0.01, 0.007, 0.005, 0.003]
       backend.megatron.global_batch_size: [256, 512, 1024]
  
 backend:
