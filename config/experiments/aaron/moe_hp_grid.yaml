@@ -1,17 +1,19 @@
 # @package _global_
 defaults:
-  - /experiments/base
-  - /backend: megatron_torchrun
+  - /backend: megatron_torchdist
   - /container: leonardo
   - /slurm: leonardo
+  - /job: default
   - /sweep: none
-  -  override /backend/megatron: [data_nemotron_cc,moe_200M_A50M]
+  - override /backend/megatron: [data_nemotron_cc,moe_200M_A50M]
   - _self_
 
 job:
   base_output_dir: "${.name}"
-  name: "moe_hp_grid_lr${backend.megatron.lr}_gbsz${backend.megatron.global_batch_size}"
+  name: "moe_hp_grid"
+  log_path: "${.name}"
   log_path_current: "${.name}"
+
 
 slurm:
   sbatch:
@@ -25,35 +27,49 @@ container:
      "/leonardo_work/OELLM_prod2026/"
   ]
 
-sweep:
-  base_values:
-    project.name: "moe_exploration_\\${backend.megatron.lr}_\\${backend.megatron.global_batch_size}"
-  grids:
-      backend.megatron.lr: [0.01, 0.007, 0.005, 0.003]
-      backend.megatron.global_batch_size: [256, 512, 1024]
- 
 backend:
   megatron:
     log_throughput: true
     log_interval: 1
     log_progress: true
+    save: ${job.base_output_dir}
+    load: ${job.base_output_dir}
+    tensorboard_dir: ${job.base_output_dir}/tensorboard
+    save_interval: 10000
+    wandb_save_dir: "${job.base_output_dir}/wandb"
+    wandb_project: "${job.name}"
+    wandb_exp_name: "moe_200M_A50M"
 
+    aux:
+      tokens: 50_000_000_000  # Default: 50B tokens
     # training schedule. Round numbers to avoid floating point issues
     # set num_tokens to the formula
-    train_iters: ${oc.eval:'-(-30_000_000_000 // (${.global_batch_size} * ${.seq_length}))'}
-    lr_warmup_iters: ${oc.eval:'min(${.train_iters} // 10, 25000)'}
-    lr_wsd_decay_iters: ${oc.eval:'${.train_iters} * 0.2'}
-    lr_decay_iters: ${.train_iters}
     # exit_interval: 10000
-    save: ${project.base_output_dir}
-    load: ${project.base_output_dir}
-    tensorboard_dir: ${project.base_output_dir}/tensorboard
-    save_interval: 10000
-    wandb_save_dir: "${project.base_output_dir}/wandb"
-    wandb_project: "${project.name}"
-    wandb_exp_name: "moe_200M_A50M_lr${.lr}_gbsz${.global_batch_size}_$SLURM_JOB_ID"
-
   torchrun_args:
     rdzv_backend: c10d
 
-
+    #sweep:
+    #  base_values:    
+    #    backend.megatron.train_iters: "\\${oc.eval:'(\\${backend.megatron.aux.tokens}+\\${backend.megatron.seq_length}*\\${backend.megatron.global_batch_size}-1)//(\\${backend.megatron.seq_length}*\\${backend.megatron.global_batch_size})'}"
+    #    #   backend.megatron.train_iters: "${oc.eval:'-(-30_000_000_000 // (\\${backend.megatron.global_batch_size} * \\${backend.megatron.seq_length}))'}"
+    #    backend.megatron.lr_warmup_iters: 2000
+    #    backend.megatron.lr_wsd_decay_iters: "\\${oc.eval:'int(\\${backend.megatron.train_iters}*0.2)'}"
+    #    # backend.megatron.lr_wsd_decay_iters: ${oc.eval:'${.train_iters} * 0.2'}
+    #    #backend.megatron.lr_decay_iters: ${backend.megatron.train_iters}
+    #    #    backend.megatron.lr_wsd_decay_iters: "\\${oc.eval:'int(((\\${backend.megatron.aux.tokens}+\\${backend.megatron.seq_length}*\\${backend.megatron.global_batch_size}-1)//(\\${backend.megatron.seq_length}*\\${backend.megatron.global_batch_size}))*\\${backend.megatron.aux.decay_fraction})'}"
+    #    # backend.megatron.aux.start_iter: "\\${oc.eval:'int(((\\${backend.megatron.aux.tokens}+\\${backend.megatron.seq_length}*\\${backend.megatron.global_batch_size}-1)//(\\${backend.megatron.seq_length}*\\${backend.megatron.global_batch_size}))*(1-\\${backend.megatron.aux.decay_fraction}))'}"
+    #    #backend.megatron.aux.start_iter_round: "\\${oc.eval:'int(\\${backend.megatron.aux.start_iter}//\\${backend.megatron.save_interval})*\\${backend.megatron.save_interval}'}"
+    #   #
+    #    backend.megatron.save: ${job.base_output_dir}
+    #    backend.megatron.load: ${job.base_output_dir}
+    #    backend.megatron.tensorboard_dir: ${job.base_output_dir}/tensorboard
+    #    backend.megatron.save_interval: 10000
+    #    backend.megatron.wandb_save_dir: "${job.base_output_dir}/wandb"
+    #    backend.megatron.wandb_project: "${job.name}"
+    #    backend.megatron.wandb_exp_name: "moe_200M_A50M_lr\\${megatron.backend.lr}_gbsz\\${megatron.backend.global_batch_size}_$SLURM_JOB_ID"
+    #
+    #    project.name: "moe_hp_grid_\\${backend.megatron.lr}_\\${backend.megatron.global_batch_size}"
+    #  grids:
+    #    backend.megatron.lr: [0.007]
+    #    backend.megatron.global_batch_size: [512]
+    # 
