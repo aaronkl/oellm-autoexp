@@ -102,7 +102,7 @@ backend:
     profile_step_end: 12
 
     # EVALS
-    eval_interval: 800
+    eval_interval: 160
     eval_iters: 100
 
     # Mixture of Experts (MoE) specific parameters
