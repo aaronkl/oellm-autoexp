@@ -5,6 +5,7 @@ defaults:
   - /slurm: leonardo
   - /job: default
   - /sweep: none
+  - /backend/megatron: base
   - _self_
 
 index: 0
@@ -133,8 +134,8 @@ backend:
     log_throughput: true
     log_interval: 1
     log_progress: true
-    save: "${job.base_output_dir}/checkpoints/moe_200M_A50M_lr${.lr}_gbsz${.global_batch_size}"
-    load: "${job.base_output_dir}/checkpoints/moe_200M_A50M_lr${.lr}_gbsz${.global_batch_size}"
+    save: "${job.base_output_dir}/"
+    load: "${job.base_output_dir}/"
     save_interval: 10000  # TODO: reduce this to save checkpoints
     data_cache_path: ${oc.env:OELLM_CACHE_DIR,".cache"}
     vocab_file: /leonardo_work/OELLM_prod2026/models/EleutherAI/gpt-neox-20b/vocab.json
