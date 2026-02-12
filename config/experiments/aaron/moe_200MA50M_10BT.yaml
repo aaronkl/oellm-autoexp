@@ -13,7 +13,7 @@ stage: ""
 
 job:
   base_output_dir: "${.name}"
-  name: "moe_200MA50M_10BT"
+  name: "moe_200MA50M_10BT_sched${backend.megatron.lr_decay_style}_lr${backend.megatron.lr}_gbsz${backend.megatron.global_batch_size}_beta2${backend.megatron.adam_beta2}"
 
 
 slurm:
